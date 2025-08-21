@@ -5,12 +5,21 @@ import threading
 import os
 import json
 import traceback
+import sys  # NEW: for resource_path
 
 # IMPORTANT: your backend module that exposes main_with_inputs(...)
 import report_builder
 
 APP_TITLE = "GHG Report Builder"
 SETTINGS_FILE = os.path.join(os.path.expanduser("~"), ".ghg_report_builder_gui.json")
+
+# ---------- Helpers for packaging (works in dev & PyInstaller) ----------
+
+def resource_path(relpath: str) -> str:
+    """Get absolute path to resource, works for dev and for PyInstaller bundle."""
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relpath)
+    return os.path.join(os.path.abspath("."), relpath)
 
 def load_settings():
     try:
@@ -122,8 +131,31 @@ def build_gui():
     root.title(APP_TITLE)
     root.geometry("680x400")
 
-    settings = load_settings()
+    # --- NEW: set window + taskbar icon ---
+    try:
+        root.iconbitmap(resource_path(os.path.join("icon", "ghg-rep-builder.ico")))  # Title bar / Alt-Tab on Windows
+    except Exception:
+        pass
 
+    # Optional: if a PNG exists, also set iconphoto (helps taskbar on some Tk builds)
+    png_fallback = resource_path(os.path.join("icon", "ghg-rep-builder.png"))
+    if os.path.exists(png_fallback):
+        try:
+            icon_img = tk.PhotoImage(file=png_fallback)
+            root.iconphoto(True, icon_img)
+            root._icon_img_ref = icon_img  # prevent garbage collection
+        except Exception:
+            pass
+
+    # Optional: unique AppID so Windows taskbar groups under your icon/name
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("GHG.Report.Builder")
+    except Exception:
+        pass
+    # --- end NEW ---
+
+    settings = load_settings()
     status_var = tk.StringVar(value="")
 
     # Single tab (Advanced only)
