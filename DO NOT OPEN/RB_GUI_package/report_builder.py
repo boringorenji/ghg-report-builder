@@ -45,11 +45,19 @@ def format_value(cell):
     if value is None:
         return ''
     number_format = getattr(cell, 'number_format', '') or ''
-
-    # Percent cells: Excel stores 6.6% as 0.066 (and -6.6% as -0.066)
+    # Handle percent formats robustly
     if isinstance(value, (int, float)) and ('%' in number_format or '0%' in number_format):
-        val = value if -1 <= value <= 1 else value / 100.0   # <-- allow negatives
-        return f"{val * 100:.2f}%"
+        val = value if 0 <= value <= 1 else value / 100.0
+        return f"{val * 100:.2f}%"  # Format as percentage with two decimal places
+
+    # Force 0 → 0.0000
+    if isinstance(value, (int, float)) and value == 0:
+        return "0.0000"
+
+    # You might also want to format all numbers consistently:
+    # if isinstance(value, (int, float)):
+    #     return f"{value:.4f}"
+
     return str(value)
 
 
